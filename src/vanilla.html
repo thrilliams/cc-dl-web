@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>CrossCode</title>
+
+		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+		<link rel="manifest" href="/favicon/site.webmanifest" />
+		<link rel="mask-icon" href="/favicon/safari-pinned-tab.svg" color="#5bbad5" />
+		<link rel="shortcut icon" href="/favicon/favicon.ico" />
+		<meta name="msapplication-TileColor" content="#2b5797" />
+		<meta name="msapplication-config" content="/favicon/browserconfig.xml" />
+		<meta name="theme-color" content="#ffffff" />
+
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta
+			name="viewport"
+			content="width=320, initial-scale=0.5, maximum-scale=0.5, user-scalable=0"
+		/>
+
+		<link rel="stylesheet" type="text/css" href="impact/page/css/style.css" />
+		<link
+			rel="stylesheet"
+			type="text/css"
+			href="impact/page/css/ui-darkness/jquery-ui-1.10.2.custom.min.css"
+		/>
+		<link rel="stylesheet" type="text/css" href="game/page/game-base.css" />
+
+		<script src="impact/page/js/aes.js"></script>
+		<script src="impact/page/js/seedrandom.js"></script>
+		<script src="impact/page/js/jquery-1.11.1.min.js"></script>
+		<script src="impact/page/js/jquery-ui-1.10.2.custom.min.js"></script>
+		<script src="impact/page/js/options.js"></script>
+		<script src="game/page/game-base.js"></script>
+		<script src="js/game.compiled.js"></script>
+
+		<script>
+			var IG_GAME_SCALE = 2;
+			var IG_GAME_CACHE = '';
+			var IG_ROOT = '';
+			var IG_WIDTH = 568;
+			var IG_HEIGHT = 320;
+			var IG_HIDE_DEBUG = false;
+			var IG_SCREEN_MODE_OVERRIDE = 2;
+			var IG_WEB_AUDIO_BGM = false;
+			var IG_FORCE_HTML5_AUDIO = false;
+			var LOAD_LEVEL_ON_GAME_START = null;
+			var IG_GAME_DEBUG = false;
+			var IG_GAME_BETA = false;
+		</script>
+	</head>
+	<body style="overflow: hidden">
+		<div id="options" class="toggleMenu" style="display: none">
+			<a class="trigger"><span>Options</span></a>
+			<ul class="optionList"></ul>
+		</div>
+
+		<div id="game">
+			<canvas id="canvas"></canvas>
+		</div>
+
+		<script>
+			// build script populates this with extensions
+			const EXTENSIONS = [];
+
+			// patch extension "loading" to work in browser
+			ig.ExtensionList = ig.ExtensionList.extend({
+				loadInternal: function () {
+					console.log('Extensions:', EXTENSIONS);
+					for (const extension of EXTENSIONS) {
+						if (extension[0] !== '-') {
+							this.extensions[extension] = new ig.Extension(extension);
+						}
+					}
+					this.loadingFinished(true);
+				}
+			});
+
+			// clean up native implementation of game starting
+			window.addEventListener('load', () => {
+				// modify base class to include fullscreen check
+				sc.CrossCode = sc.CrossCode.extend({
+					update: function () {
+						if (ig.input.pressed('fullscreen'))
+							document.getElementById('game').requestFullscreen();
+						this.parent();
+					}
+				});
+
+				// start the game
+				$('.playOptions').fadeIn(200);
+				startCrossCode();
+
+				// bind f9 to toggle fullscreen
+				ig.input.bind(ig.KEY.F9, 'fullscreen');
+			});
+		</script>
+	</body>
+</html>
