@@ -1,12 +1,14 @@
 import { ensureDir, ensureSymlink, emptyDir, copy } from 'https://deno.land/std@0.156.0/fs/mod.ts';
 import { join, resolve } from 'https://deno.land/std@0.156.0/path/mod.ts';
 import { DOMParser } from 'https://deno.land/x/deno_dom@v0.1.35-alpha/deno-dom-wasm.ts';
+import { parseFlags } from 'https://deno.land/x/cliffy@v0.25.0/flags/mod.ts';
 
-let ASSETS: string;
+const args = parseFlags(Deno.args);
+
+let ASSETS = args.flags.A || args.flags.assets;
 const DEV_DIR = './lib';
 const PROD_DIR = './out';
-
-const PRODUCTION = false;
+const PRODUCTION = args.flags.P || args.flags.production;
 
 const locateAssets = () => {
 	switch (Deno.build.os) {
@@ -68,7 +70,6 @@ const patchHtml = async () => {
 const build = async () => {
 	if (!ASSETS) {
 		const estimatedPath = locateAssets()!;
-		console.log('Defaulting CrossCode asset path to', estimatedPath);
 		ASSETS = estimatedPath;
 	}
 	await prepareGameDir();
