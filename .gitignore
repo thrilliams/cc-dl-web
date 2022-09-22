@@ -1,0 +1,5 @@
+.vscode
+.DS_Store
+game.js
+lib
+out
