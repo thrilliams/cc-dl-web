@@ -5,7 +5,7 @@ import { parseFlags } from 'https://deno.land/x/cliffy@v0.25.0/flags/mod.ts';
 
 const args = parseFlags(Deno.args);
 
-let ASSETS = args.flags.A || args.flags.assets;
+let ASSETS = (args.flags.A || args.flags.assets) && resolve(args.flags.A || args.flags.assets);
 const DEV_DIR = './lib';
 const PROD_DIR = './out';
 const PRODUCTION = args.flags.P || args.flags.production;
