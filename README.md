@@ -1,6 +1,6 @@
 # Installation
 
-`deno compile --unstable --allow-read --allow-write --allow-env --output=ccweb index.ts`
+`deno compile --unstable --allow-read --allow-write --allow-env --output=ccweb src/index.ts -P`
 
 # Usage
 
