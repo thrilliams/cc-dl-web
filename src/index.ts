@@ -2,11 +2,12 @@ import { ensureDir, ensureSymlink, emptyDir, copy } from 'https://deno.land/std@
 import { join, resolve } from 'https://deno.land/std@0.156.0/path/mod.ts';
 import { DOMParser } from 'https://deno.land/x/deno_dom@v0.1.35-alpha/deno-dom-wasm.ts';
 import { parseFlags } from 'https://deno.land/x/cliffy@v0.25.0/flags/mod.ts';
+import { copyFromBundle, readTextFromBundle } from './bundleHelper.ts';
 
 const args = parseFlags(Deno.args);
 
 let ASSETS = (args.flags.A || args.flags.assets) && resolve(args.flags.A || args.flags.assets);
-const DEV_DIR = './lib';
+const DEV_DIR = './out';
 const PROD_DIR = './out';
 const PRODUCTION = args.flags.P || args.flags.production;
 
@@ -23,7 +24,7 @@ const locateAssets = () => {
 
 const prepareGameDir = async () => {
 	await ensureDir(PRODUCTION ? PROD_DIR : DEV_DIR);
-	if (!PRODUCTION) await emptyDir(DEV_DIR);
+	await emptyDir(DEV_DIR);
 };
 
 const makeSymlinksOrCopies = async () => {
@@ -37,17 +38,13 @@ const makeSymlinksOrCopies = async () => {
 		}
 	}
 
-	if (!PRODUCTION) {
-		await ensureSymlink(resolve('./src/favicon'), join(DEV_DIR, 'favicon'));
-	} else {
-		await copy(resolve('./src/favicon'), join(PROD_DIR, 'favicon'));
-	}
+	await copyFromBundle('lib/favicon', join(PROD_DIR, 'favicon')); // await (PRODUCTION ? copyFromBundle : copy)('lib/favicon/', join(PROD_DIR, 'favicon'));
 };
 
 const patchHtml = async () => {
-	const htmlPath = 'src/vanilla.html';
-	const html = await Deno.readTextFile(htmlPath);
-	const doc = new DOMParser().parseFromString(html, 'text/html')!;
+	const htmlPath = 'lib/vanilla.html';
+	const html = await (PRODUCTION ? readTextFromBundle : Deno.readTextFile)(htmlPath);
+	const doc = new DOMParser().parseFromString(html!, 'text/html')!;
 
 	const script = doc.querySelector('body > script')!;
 	const lines = script.innerText.split('\n');
