@@ -1,17 +1,24 @@
-import { ensureDir, ensureSymlink, emptyDir, copy } from 'https://deno.land/std@0.156.0/fs/mod.ts';
-import { join, resolve } from 'https://deno.land/std@0.156.0/path/mod.ts';
-import { DOMParser } from 'https://deno.land/x/deno_dom@v0.1.35-alpha/deno-dom-wasm.ts';
+import {
+	ensureDir,
+	ensureSymlink,
+	emptyDir,
+	copy,
+	walk
+} from 'https://deno.land/std@0.156.0/fs/mod.ts';
+import { join, relative, resolve } from 'https://deno.land/std@0.156.0/path/mod.ts';
 import { parseFlags } from 'https://deno.land/x/cliffy@v0.25.0/flags/mod.ts';
-import { copyFromBundle, readTextFromBundle } from './bundleHelper.ts';
 
 const args = parseFlags(Deno.args);
 
 let ASSETS = (args.flags.A || args.flags.assets) && resolve(args.flags.A || args.flags.assets);
-const DEV_DIR = './out';
-const PROD_DIR = './out';
-const PRODUCTION = args.flags.P || args.flags.production;
 
-const locateAssets = () => {
+const PRODUCTION = args.flags.P || args.flags.production;
+const OUT_DIR = './out'; //PRODUCTION ? './out' :
+
+const MODDED = args.flags.M || args.flags.modded;
+const MOD_PATH = './mods';
+
+function locateAssets() {
 	switch (Deno.build.os) {
 		case 'darwin':
 			return join(
@@ -20,58 +27,114 @@ const locateAssets = () => {
 			);
 		// other platforms go here
 	}
-};
+}
 
-const prepareGameDir = async () => {
-	await ensureDir(PRODUCTION ? PROD_DIR : DEV_DIR);
-	await emptyDir(DEV_DIR);
-};
+async function prepareGameDir() {
+	await ensureDir(OUT_DIR);
+	await emptyDir(OUT_DIR);
+}
 
-const makeSymlinksOrCopies = async () => {
-	for await (const entry of Deno.readDir(ASSETS)) {
-		if (entry.name !== 'node-webkit.html') {
-			if (!PRODUCTION) {
-				await ensureSymlink(join(ASSETS, entry.name), join(DEV_DIR, entry.name));
-			} else {
-				await copy(join(ASSETS, entry.name), join(PROD_DIR, entry.name));
+async function makeSymlinksOrCopies() {
+	if (PRODUCTION) {
+		for await (const entry of Deno.readDir(ASSETS)) {
+			if (entry.name !== 'node-webkit.html')
+				await copy(join(ASSETS, entry.name), join(OUT_DIR, entry.name));
+		}
+	} else {
+		for await (const entry of walk(ASSETS)) {
+			if (entry.name === 'node-webkit.html') continue;
+			if (entry.isDirectory) continue;
+			await ensureSymlink(entry.path, join(OUT_DIR, relative(ASSETS, entry.path)));
+		}
+	}
+
+	if (MODDED) {
+		await (PRODUCTION ? copy : ensureSymlink)(
+			join(ASSETS, 'node-webkit.html'),
+			join(OUT_DIR, 'node-webkit.html')
+		);
+
+		// copy mod assets since i have no cells in my brain and don't how to do this otherwise
+		for await (const mod of Deno.readDir(MOD_PATH)) {
+			if (mod.isFile) continue;
+			if (mod.name.startsWith('-')) continue;
+			const packageJson = await Deno.readTextFile(join(MOD_PATH, mod.name, 'package.json'));
+			const modPackage = JSON.parse(packageJson);
+			if (!modPackage.assets) continue;
+			for (const asset of modPackage.assets) {
+				(PRODUCTION ? copy : ensureSymlink)(
+					resolve(join(MOD_PATH, mod.name, 'assets', asset)),
+					join(OUT_DIR, asset)
+				);
 			}
 		}
 	}
 
-	await copyFromBundle('lib/favicon', join(PROD_DIR, 'favicon')); // await (PRODUCTION ? copyFromBundle : copy)('lib/favicon/', join(PROD_DIR, 'favicon'));
-};
+	if (PRODUCTION) {
+		await copy('lib/favicon/', join(OUT_DIR, 'favicon'));
+	} else {
+		await ensureSymlink(join(Deno.cwd(), 'lib/favicon/'), join(OUT_DIR, 'favicon'));
+	}
 
-const patchHtml = async () => {
-	const htmlPath = 'lib/vanilla.html';
-	const html = await (PRODUCTION ? readTextFromBundle : Deno.readTextFile)(htmlPath);
-	const doc = new DOMParser().parseFromString(html!, 'text/html')!;
+	// TODO: remote alternative
+	if (MODDED) {
+		if (PRODUCTION) {
+			await copy(MOD_PATH, join(OUT_DIR, 'mods'));
+		} else {
+			await ensureSymlink(join(Deno.cwd(), MOD_PATH), join(OUT_DIR, 'mods'));
+		}
+	}
+}
 
-	const script = doc.querySelector('body > script')!;
-	const lines = script.innerText.split('\n');
-	const index = lines.findIndex((e) => e.includes('const EXTENSIONS'));
-	const indentation = lines[index].slice(0, lines[index].indexOf('const EXTENSIONS'));
+async function bundleCssAndJs() {
+	await Deno.run({
+		cmd: [
+			Deno.execPath(),
+			'bundle',
+			'-c',
+			'src/webcfg.json',
+			`lib/${MODDED ? 'modded' : 'vanilla'}.ts`,
+			join(OUT_DIR, 'index.js')
+		],
+		stdout: 'piped'
+	}).output();
+
+	if (MODDED) {
+		await copy('lib/index.css', join(OUT_DIR, 'index.css'), { overwrite: true });
+	}
+}
+
+async function patchHtml() {
+	const htmlPath = `lib/${MODDED ? 'modded' : 'vanilla'}.html`;
+	const html = await Deno.readTextFile(htmlPath);
+	await Deno.writeTextFile(join(OUT_DIR, 'index.html'), html);
+}
+
+async function writeExtensionsAndMods() {
 	const extensions = [];
-	for await (const entry of Deno.readDir(join(PRODUCTION ? PROD_DIR : DEV_DIR, 'extension')))
-		if (entry.isDirectory) extensions.push(entry.name);
-	lines[index] = `${indentation}const EXTENSIONS = [${extensions
-		.map((e) => `'${e}'`)
-		.join(', ')}];`;
-	script.innerText = lines.join('\n');
+	for await (const entry of Deno.readDir(join(OUT_DIR, 'extension')))
+		if (entry.isDirectory && !entry.name.startsWith('-')) extensions.push(entry.name);
+	await Deno.writeTextFile(join(OUT_DIR, 'extensions.json'), JSON.stringify(extensions));
 
-	await Deno.writeTextFile(
-		join(PRODUCTION ? PROD_DIR : DEV_DIR, 'index.html'),
-		`<!DOCTYPE html>${doc.documentElement!.innerHTML}`
-	);
-};
+	if (MODDED) {
+		const mods = [];
+		for await (const entry of Deno.readDir(join(OUT_DIR, 'mods')))
+			if (entry.isDirectory && !entry.name.startsWith('-')) mods.push(entry.name);
+		await Deno.writeTextFile(join(OUT_DIR, 'mods.json'), JSON.stringify(mods));
+	}
+}
 
-const build = async () => {
+async function build() {
 	if (!ASSETS) {
 		const estimatedPath = locateAssets()!;
 		ASSETS = estimatedPath;
 	}
+
 	await prepareGameDir();
 	await makeSymlinksOrCopies();
+	await bundleCssAndJs();
 	await patchHtml();
-};
+	await writeExtensionsAndMods();
+}
 
 build();

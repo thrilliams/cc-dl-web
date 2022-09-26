@@ -51,6 +51,7 @@
 			var IG_GAME_BETA = false;
 		</script>
 	</head>
+
 	<body style="overflow: hidden">
 		<div id="options" class="toggleMenu" style="display: none">
 			<a class="trigger"><span>Options</span></a>
@@ -58,44 +59,17 @@
 		</div>
 
 		<div id="game">
-			<canvas id="canvas"></canvas>
+			<canvas id="canvas" />
 		</div>
 
-		<script>
-			// build script populates this with extensions
-			const EXTENSIONS = [];
+		<script src="/index.js" type="module"></script>
 
-			// patch extension "loading" to work in browser
-			ig.ExtensionList = ig.ExtensionList.extend({
-				loadInternal: function () {
-					console.log('Extensions:', EXTENSIONS);
-					for (const extension of EXTENSIONS) {
-						if (extension[0] !== '-') {
-							this.extensions[extension] = new ig.Extension(extension);
-						}
-					}
-					this.loadingFinished(true);
-				}
-			});
-
+		<!-- <script>
 			// clean up native implementation of game starting
-			window.addEventListener('load', () => {
-				// modify base class to include fullscreen check
-				sc.CrossCode = sc.CrossCode.extend({
-					update: function () {
-						if (ig.input.pressed('fullscreen'))
-							document.getElementById('game').requestFullscreen();
-						this.parent();
-					}
-				});
-
-				// start the game
+			addEventListener('load', () => {
 				$('.playOptions').fadeIn(200);
 				startCrossCode();
-
-				// bind f9 to toggle fullscreen
-				ig.input.bind(ig.KEY.F9, 'fullscreen');
 			});
-		</script>
+		</script> -->
 	</body>
 </html>
