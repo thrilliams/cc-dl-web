@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>CrossCode</title>
+
+		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+		<link rel="manifest" href="/favicon/site.webmanifest" />
+		<link rel="mask-icon" href="/favicon/safari-pinned-tab.svg" color="#5bbad5" />
+		<link rel="shortcut icon" href="/favicon/favicon.ico" />
+		<meta name="msapplication-TileColor" content="#2b5797" />
+		<meta name="msapplication-config" content="/favicon/browserconfig.xml" />
+		<meta name="theme-color" content="#ffffff" />
+
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta
+			name="viewport"
+			content="width=320, initial-scale=0.5, maximum-scale=0.5, user-scalable=0"
+		/>
+
+		<style>
+			html,
+			body {
+				background-color: #000;
+				font-size: inherit !important;
+			}
+
+			.title {
+				position: absolute;
+				text-align: center;
+				left: 0;
+				bottom: 4rem;
+				font-size: 2rem;
+				width: 100%;
+				color: #fff;
+				font-family: monospace;
+			}
+
+			.ui {
+				position: absolute;
+				top: 20px;
+				right: 20px;
+				color: white;
+				text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+			}
+
+			#overlay {
+				display: block;
+				position: absolute;
+				background-color: rgba(0, 0, 0, 0.3);
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="overlay"></div>
+		<h1 id="status" class="title">Initializing CCLoader</h1>
+		<div id="ui" class="ui"></div>
+
+		<script src="/index.js" type="module"></script>
+	</body>
+</html>
