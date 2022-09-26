@@ -2,3 +2,6 @@
 .DS_Store
 game.js
 out
+mods/**/*
+!mods/simplify/**/*
+!mods/ccloader-version-display/**/*

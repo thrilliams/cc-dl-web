@@ -24,6 +24,7 @@ export const Package = z.strictObject({
 	homepage: z.string().optional(),
 
 	assets: z.string().array().optional(),
+	runtimeAssets: z.record(z.string(), z.string()).optional(),
 
 	// scripts
 	main: z.string().optional(),

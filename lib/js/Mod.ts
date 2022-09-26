@@ -67,6 +67,11 @@ export class Mod {
 	}
 
 	getAsset(path: string) {
+		path = path.replace(/\\/g, '/').trim();
+
+		if (this.package.runtimeAssets && this.package.runtimeAssets[path])
+			return this.package.runtimeAssets[path];
+
 		if (this.package.assets && this.package.assets.includes(path)) return path;
 	}
 }
