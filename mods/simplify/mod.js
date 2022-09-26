@@ -398,7 +398,7 @@
 			document.createEvent('Event').initEvent('returnToMenu', true, true);
 			document.createEvent('Event').initEvent('mapUnloaded', true, true);
 		}
-		async _postInitialize() {
+		_postInitialize() {
 			this._initializeFont();
 			this._initializeOptions();
 

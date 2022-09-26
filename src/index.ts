@@ -40,12 +40,16 @@ async function makeSymlinksOrCopies() {
 			if (entry.name !== 'node-webkit.html')
 				await copy(join(ASSETS, entry.name), join(OUT_DIR, entry.name));
 		}
+
+		await copy('lib/favicon/', join(OUT_DIR, 'favicon'));
 	} else {
 		for await (const entry of walk(ASSETS)) {
 			if (entry.name === 'node-webkit.html') continue;
 			if (entry.isDirectory) continue;
 			await ensureSymlink(entry.path, join(OUT_DIR, relative(ASSETS, entry.path)));
 		}
+
+		await ensureSymlink(join(Deno.cwd(), 'lib/favicon/'), join(OUT_DIR, 'favicon'));
 	}
 
 	if (MODDED) {
@@ -54,7 +58,13 @@ async function makeSymlinksOrCopies() {
 			join(OUT_DIR, 'node-webkit.html')
 		);
 
-		// copy mod assets since i have no cells in my brain and don't how to do this otherwise
+		if (PRODUCTION) {
+			await copy(MOD_PATH, join(OUT_DIR, 'mods'));
+		} else {
+			await ensureSymlink(join(Deno.cwd(), MOD_PATH), join(OUT_DIR, 'mods'));
+		}
+
+		// copy mod assets since i have no cells in my brain and don't want to be smarter
 		for await (const mod of Deno.readDir(MOD_PATH)) {
 			if (mod.isFile) continue;
 			if (mod.name.startsWith('-')) continue;
@@ -62,26 +72,27 @@ async function makeSymlinksOrCopies() {
 			const modPackage = JSON.parse(packageJson);
 			if (!modPackage.assets) continue;
 			for (const asset of modPackage.assets) {
-				(PRODUCTION ? copy : ensureSymlink)(
-					resolve(join(MOD_PATH, mod.name, 'assets', asset)),
-					join(OUT_DIR, asset)
-				);
+				const outPath = join(OUT_DIR, asset);
+				if (PRODUCTION) {
+					await copy(resolve(join(MOD_PATH, mod.name, 'assets', asset)), outPath, {
+						overwrite: true
+					});
+				} else {
+					// if the mod asset exists, remove it
+					try {
+						await Deno.stat(outPath);
+						await Deno.remove(outPath);
+					} catch (e) {
+						if (!(e instanceof Deno.errors.NotFound)) throw e;
+					}
+
+					// (so we can replace the symlink)
+					await ensureSymlink(
+						resolve(join(MOD_PATH, mod.name, 'assets', asset)),
+						outPath
+					);
+				}
 			}
-		}
-	}
-
-	if (PRODUCTION) {
-		await copy('lib/favicon/', join(OUT_DIR, 'favicon'));
-	} else {
-		await ensureSymlink(join(Deno.cwd(), 'lib/favicon/'), join(OUT_DIR, 'favicon'));
-	}
-
-	// TODO: remote alternative
-	if (MODDED) {
-		if (PRODUCTION) {
-			await copy(MOD_PATH, join(OUT_DIR, 'mods'));
-		} else {
-			await ensureSymlink(join(Deno.cwd(), MOD_PATH), join(OUT_DIR, 'mods'));
 		}
 	}
 }
