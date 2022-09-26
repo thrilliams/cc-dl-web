@@ -2,7 +2,7 @@ import { valid, validRange } from 'https://deno.land/std@0.156.0/semver/mod.ts';
 import { z } from 'https://deno.land/x/zod@v3.19.1/index.ts';
 import { fetchJson } from './files.ts';
 
-export const Package = z.strictObject({
+export const Package = z.object({
 	name: z.string(),
 	ccmodHumanName: z.string().optional(),
 	version: z.string().refine((ver) => valid(ver) !== null, {
